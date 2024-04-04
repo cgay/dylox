@@ -1,0 +1,12 @@
+{
+    "dependencies": [  ],
+    "dev-dependencies": [ "testworks" ],
+    "description": "Lox language from Crafting Interpreters, in Dylan",
+    "name": "dylox",
+    "version": "0.1.0",
+    "url": "https://github.com/cgay/dylox",
+    "keywords": [ ],
+    "contact": "carlgay@gmail.com",
+    "license": "MIT",
+    "license-url": "https://opensource.org/license/mit"
+}
