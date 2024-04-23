@@ -17,7 +17,7 @@ define function run-prompt
     force-out();
     // Simulate Java's InputStreamReader.readLine by returning #f on end of stream (C-d).
     let line = block ()
-                 io/read-line(io/*standard-input*)
+                 io/read-line(*standard-input*)
                exception (io/<end-of-stream-error>)
                  #f
                end;

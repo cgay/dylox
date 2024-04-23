@@ -24,6 +24,6 @@ define module lox-impl
   use file-system, prefix: "fs/";
   use format-out;
   use locators;
-  use standard-io, prefix: "io/";
+  use standard-io;
   use streams, prefix: "io/";
 end module;
