@@ -3,7 +3,9 @@ Module: dylan-user
 define library lox
   use common-dylan;
   use io;
+  use strings;
   use system;
+  use uncommon-dylan;
 
   export
     lox,
@@ -14,7 +16,9 @@ define module lox
   create
     run,
     run-file,
-    run-prompt;
+    run-prompt,
+    <lox-error>,
+    <scanner-error>;
 end module;
 
 define module lox-impl
@@ -22,8 +26,18 @@ define module lox-impl
 
   use common-dylan;
   use file-system, prefix: "fs/";
-  use format-out;
+  use format, prefix: "io/";
+  use format-out, prefix: "io/";
   use locators;
+  use print, prefix: "io/";
   use standard-io;
   use streams, prefix: "io/";
+  use strings;
+  use uncommon-utils;
+
+  // for the test suite
+  export
+    <scanner>,
+    scan-tokens,
+    %value;
 end module;
