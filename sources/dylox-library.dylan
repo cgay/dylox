@@ -9,6 +9,6 @@ end library;
 
 define module dylox
   use common-dylan;
-  use format-out;
+  use format-out, prefix: "io/";
   use lox;
 end module;

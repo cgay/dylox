@@ -1,6 +1,11 @@
 {
-    "dependencies": [  ],
-    "dev-dependencies": [ "testworks" ],
+    "dependencies": [
+        "strings",
+        "uncommon-dylan"
+    ],
+    "dev-dependencies": [
+        "testworks"
+    ],
     "description": "Lox language from Crafting Interpreters, in Dylan",
     "name": "dylox",
     "version": "0.1.0",
