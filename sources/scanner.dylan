@@ -72,18 +72,19 @@ end function;
 define class <token> (<object>)
   constant slot %text  :: <string>,  required-init-keyword: text:;
   constant slot %line  :: <integer>, required-init-keyword: line:;
-  // %value is a symbol for any keyword, operator, or punctuation in Lox.
-  // For <string-token> it's a string, for <number-token> it's a number, etc.
-  constant slot %value :: <object>,   required-init-keyword: value:;
+  // %value is a symbol for any reserved word, operator, or punctuation.
+  // For other token classes see scan-token, below.
+  constant slot %value :: <object>, required-init-keyword: value:;
 end class;
 
-define class <punctuation-token>   (<token>) end; // any single character 
+define class <punctuation-token>   (<token>) end; // single char, punctuation, {}[]
 define class <operator-token>      (<token>) end;
 define class <identifier-token>    (<token>) end;
 define class <reserved-word-token> (<identifier-token>) end;
-define class <number-token>        (<token>) end;
-define class <string-token>        (<token>) end;
-define class <boolean-token>       (<token>) end;
+define class <literal-token>       (<token>) end;
+define class <number-token>        (<literal-token>) end;
+define class <string-token>        (<literal-token>) end;
+define class <boolean-token>       (<literal-token>) end;
 define class <comment-token>       (<token>) end;
 define class <eof-token>           (<token>) end;
 
@@ -156,10 +157,9 @@ define function scan-token (scanner :: <scanner>) => (t :: <token>)
             token(<number-token>, value: scan-number(scanner))
           elseif (alphabetic?(char) | char == '_')
             let text = scan-identifier(scanner);
-            let class = iff(member?(text, $reserved-words, test: \=),
-                            <reserved-word-token>,
-                            <identifier-token>);
-            token(class, value: text)
+            token(iff(member?(text, $reserved-words, test: \=),
+                      <reserved-word-token>,
+                      <identifier-token>))
           else
             scanner-error(scanner, "unexpected character %=", char);
             token(<eof-token>, value: #"eof");

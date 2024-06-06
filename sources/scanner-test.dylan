@@ -21,6 +21,9 @@ define test test-scan-tokens ()
   assert-equal(list(#"!=", " test", #"!=", #"eof"),
                %scan("!=// test\n!="),
                "eol comments");
+  assert-equal(list("foo", #"eof"),
+               %scan("\"foo\""),
+               "simple string");
 end test;
 
 define test test-scan-numbers ()

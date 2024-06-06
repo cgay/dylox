@@ -1,6 +1,8 @@
 Library: lox
-Files: lox-library.dylan
-       utils.dylan
-       scanner.dylan
-       lox.dylan
+Files: lox-library
+       utils
+       scanner
+       ast
+       parser
+       lox
 Target-Type: dll

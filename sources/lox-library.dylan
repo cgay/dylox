@@ -37,7 +37,11 @@ define module lox-impl
 
   // for the test suite
   export
+    %value,
+    <expression>,
+    <parser>,
     <scanner>,
+    parse-expression,
     scan-tokens,
-    %value;
+    s-expression;
 end module;

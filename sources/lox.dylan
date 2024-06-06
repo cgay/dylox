@@ -38,7 +38,7 @@ end function;
 define function run
     (scanner :: <scanner>) => ()
   let error-count = 0;
-  let handler <scanner-error>
+  let handler <lox-error>
     = method (err, next-handler :: <function>)
         inc!(error-count);
         io/format-err("Error on line %d: %s (ignored)\n",
@@ -46,8 +46,15 @@ define function run
         io/force-err();
         #f
       end;
-  for (token in scan-tokens(scanner))
+  let tokens = scan-tokens(scanner);
+  for (token in tokens)
     io/format-out("%=\n", token);
+  end;
+  let parser = make(<parser>, tokens: tokens);
+  let expr = parse-expression(parser);
+  if (expr)
+    io/format-out("%=\n", expr.s-expression);
+    io/force-out();
   end;
   if (error-count > 0)
     signal(make(<lox-error>,
