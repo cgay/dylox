@@ -72,7 +72,7 @@ end function;
 define class <token> (<object>)
   constant slot %text  :: <string>,  required-init-keyword: text:;
   constant slot %line  :: <integer>, required-init-keyword: line:;
-  // %value is a symbol for any reserved word, operator, or punctuation.
+  // %value is a symbol for most reserved words, all operator, and all punctuation.
   // For other token classes see scan-token, below.
   constant slot %value :: <object>, required-init-keyword: value:;
 end class;
@@ -84,7 +84,7 @@ define class <reserved-word-token> (<identifier-token>) end;
 define class <literal-token>       (<token>) end;
 define class <number-token>        (<literal-token>) end;
 define class <string-token>        (<literal-token>) end;
-define class <boolean-token>       (<literal-token>) end;
+define class <boolean-token>       (<reserved-word-token>, <literal-token>) end;
 define class <comment-token>       (<token>) end;
 define class <eof-token>           (<token>) end;
 
@@ -109,7 +109,7 @@ end function;
 define function scan-token (scanner :: <scanner>) => (t :: <token>)
   local
     // Make a token for the text between %token-start and %index.
-    method token (class, #key value) => (t :: <token>)
+    method token (class, #key value = unsupplied()) => (t :: <token>)
       let text = current-text(scanner);
       //io/format-out("text: %=, start: %=, index: %=\n", text, scanner.%token-start, scanner.%index);
       //io/force-out();
@@ -117,7 +117,9 @@ define function scan-token (scanner :: <scanner>) => (t :: <token>)
       make(class,
            text: text,
            line: scanner.%line,
-           value: value | as(<symbol>, text))
+           value: iff(unsupplied?(value),
+                      as(<symbol>, text),
+                      value))
     end;
   iterate loop (char = peek(scanner))
     if (~char)
@@ -157,9 +159,12 @@ define function scan-token (scanner :: <scanner>) => (t :: <token>)
             token(<number-token>, value: scan-number(scanner))
           elseif (alphabetic?(char) | char == '_')
             let text = scan-identifier(scanner);
-            token(iff(member?(text, $reserved-words, test: \=),
-                      <reserved-word-token>,
-                      <identifier-token>))
+            let true? = text = "true";
+            iff(true? | text = "false",
+                token(<boolean-token>, value: true?),
+                iff(member?(text, $reserved-words, test: \=),
+                    <reserved-word-token>,
+                    <identifier-token>))
           else
             scanner-error(scanner, "unexpected character %=", char);
             token(<eof-token>, value: #"eof");
