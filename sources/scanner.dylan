@@ -1,14 +1,32 @@
 Module: lox-impl
 
 
+// Main scanner entry point.
+define generic scan (source :: <object>) => (tokens :: <sequence>);
+
+define method scan (scanner :: <scanner>) => (tokens :: <sequence>)
+  scan-tokens(scanner)
+end method;
+
+define method scan (source :: <string>) => (tokens :: <sequence>)
+  scan(make(<scanner>, source: source))
+end method;
+
+define method scan (file :: <file-locator>) => (tokens :: <sequence>)
+  let source = fs/with-open-file(stream = file)
+                 io/read-to-end(stream)
+               end;
+  scan(make(<scanner>, source: source, file: file))
+end method;
+
+
 define constant $reserved-words
   = #["and", "class", "else", "false", "for", "fun", "if", "nil", "or",
       "print", "return", "super", "this", "true", "var", "while"];
 
 define class <scanner> (<object>)
   constant slot %source :: <string>, required-init-keyword: source:;
-  constant slot %tokens :: <sequence>;
-  constant slot %file :: <string> = "<stdin>", init-keyword: file:;
+  constant slot %file :: false-or(<file-locator>) = #f, init-keyword: file:;
   slot %line :: <integer> = 1;
   slot %token-start :: <integer> = 0; // book calls this start
   slot %index :: <integer> = 0;       // book calls this current
@@ -162,9 +180,9 @@ define function scan-token (scanner :: <scanner>) => (t :: <token>)
             let true? = text = "true";
             iff(true? | text = "false",
                 token(<boolean-token>, value: true?),
-                iff(member?(text, $reserved-words, test: \=),
-                    <reserved-word-token>,
-                    <identifier-token>))
+                token(iff(member?(text, $reserved-words, test: \=),
+                          <reserved-word-token>,
+                          <identifier-token>)))
           else
             scanner-error(scanner, "unexpected character %=", char);
             token(<eof-token>, value: #"eof");

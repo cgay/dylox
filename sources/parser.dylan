@@ -2,6 +2,44 @@ Module: lox-impl
 
 // Recursive descent parser for Lox grammar.
 
+define constant <expression?> = false-or(<expression>);
+
+// Main parsing entry point.
+//
+// TODO: eventually this will return a sequence of statements, or perhaps we'll
+// call it a <body>.
+define generic parse (source :: <object>) => (ast :: <expression?>, errors :: <sequence>);
+
+define method parse (scanner :: <scanner>) => (ast :: <expression?>, errors :: <sequence>)
+  let parser = make(<parser>, tokens: scan(scanner));
+  block ()
+    values(parse-expression(parser), parser.%errors)
+  exception (ex :: <parser-error>)
+    // TODO: once we're parsing a sequence of statements, call synchronize to
+    // recover and continue.
+    record-error(parser, ex);
+    values(#f, parser.%errors)
+  end
+end method;
+
+define method parse (source :: <string>) => (ast :: <expression?>, errors :: <sequence>)
+  parse(make(<scanner>, source: source))
+end method;
+
+define method parse (file :: <file-locator>) => (ast :: <expression?>, errors :: <sequence>)
+  fs/with-open-file (stream = file)
+    parse(make(<scanner>,
+               source: io/read-to-end(stream),
+               file: file))
+  end
+end method;
+
+define method parse (source :: <stream>) => (ast :: <expression?>, errors :: <sequence>)
+  parse(io/read-to-end(source))
+end method;
+
+
+
 define class <parser-error> (<lox-error>) end;
 
 define function parser-error (p :: <parser>, fmt :: <string>, #rest args)
@@ -13,9 +51,14 @@ define function parser-error (p :: <parser>, fmt :: <string>, #rest args)
               format-arguments: format-args))
 end function;
 
+define function record-error (p :: <parser>, err :: <lox-error>) => ()
+  add!(p.%errors, err)
+end function;
+
 define class <parser> (<object>)
   constant slot parser-tokens :: <sequence>, required-init-keyword: tokens:;
            slot parser-index :: <integer> = 0;
+  constant slot %errors :: <sequence> = make(<stretchy-vector>);
 end class;
 
 define function peek-token (p :: <parser>) => (t :: <token>)
@@ -117,8 +160,22 @@ define function parse-primary (p :: <parser>) => (e :: <expression>)
       expr
     end
   else
-    parser-error(p, "expected true, false, nil, a number, a string, or '(', got %=", token);
+    parser-error(p, "expected an expression but got %=", token);
   end
 end function;
 
-// TODO: continue at 6.3.1 Panic mode error recovery
+
+// Consume tokens until we get to the next statement.
+define function synchronize (p :: <parser>) => (token :: <token>)
+  // The book checks for SEMICOLON first but I don't see why it's necessary so
+  // I'm leaving it out for now. Will it come back to bite me?
+  iterate loop (token = peek-token(p))
+    select (token.%value)
+      #"eof", #"class", #"fun", #"var", #"for", #"if", #"while", #"print", #"return" =>
+        token;
+      otherwise =>
+        consume-token(p);
+        loop(peek-token(p))
+    end
+  end
+end function;
