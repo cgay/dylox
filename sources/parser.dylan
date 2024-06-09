@@ -166,6 +166,7 @@ end function;
 
 
 // Consume tokens until we get to the next statement.
+/* not yet:
 define function synchronize (p :: <parser>) => (token :: <token>)
   // The book checks for SEMICOLON first but I don't see why it's necessary so
   // I'm leaving it out for now. Will it come back to bite me?
@@ -179,3 +180,4 @@ define function synchronize (p :: <parser>) => (token :: <token>)
     end
   end
 end function;
+*/

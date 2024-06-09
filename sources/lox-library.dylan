@@ -14,11 +14,10 @@ end library;
 
 define module lox
   create
-    run,
-    run-file,
-    run-prompt,
     <lox-error>,
-    <scanner-error>;
+    <scanner>, <scanner-error>, scan,
+    <parser>, <parser-error>, parse,
+    <evaluator>, <eval-error>, eval, had-errors?;
 end module;
 
 define module lox-impl
@@ -39,8 +38,6 @@ define module lox-impl
   export
     %value,
     <expression>,
-    <parser>,
-    <scanner>,
     parse-expression,
     scan-tokens,
     s-expression;

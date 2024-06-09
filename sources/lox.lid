@@ -4,5 +4,5 @@ Files: lox-library
        scanner
        ast
        parser
-       lox
+       evaluator
 Target-Type: dll

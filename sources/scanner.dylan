@@ -24,6 +24,8 @@ define constant $reserved-words
   = #["and", "class", "else", "false", "for", "fun", "if", "nil", "or",
       "print", "return", "super", "this", "true", "var", "while"];
 
+define constant $nil = #"nil";
+
 define class <scanner> (<object>)
   constant slot %source :: <string>, required-init-keyword: source:;
   constant slot %file :: false-or(<file-locator>) = #f, init-keyword: file:;

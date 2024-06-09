@@ -27,7 +27,6 @@ end class;
 
 define class <call-expression> (<expression>)
   constant slot %callee :: <expression>,  required-init-keyword: callee:;
-  constant slot %paren :: <token>,        required-init-keyword: paren:;
   constant slot %arguments :: <sequence>, required-init-keyword: arguments:;
 end class;
 
