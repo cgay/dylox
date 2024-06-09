@@ -19,8 +19,10 @@ define function repl (ev :: <evaluator>) => ()
     // Simulate Java's InputStreamReader.readLine by returning #f on end of stream (C-d).
     let line = io/read-line(*standard-input*, on-end-of-stream: #f);
     if (line)
-      printf("line: %s\n", line);
-      printf("%s\n", eval(ev, line));
+      let value = eval(ev, line);
+      if (supplied?(value))
+        printf("=> %s\n", value);
+      end;
       loop();
     end;
   end;

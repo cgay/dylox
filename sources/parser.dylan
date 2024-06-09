@@ -2,31 +2,36 @@ Module: lox-impl
 
 // Recursive descent parser for Lox grammar.
 
-define constant <expression?> = false-or(<expression>);
-
 // Main parsing entry point.
-//
-// TODO: eventually this will return a sequence of statements, or perhaps we'll
-// call it a <body>.
-define generic parse (source :: <object>) => (ast :: <expression?>, errors :: <sequence>);
 
-define method parse (scanner :: <scanner>) => (ast :: <expression?>, errors :: <sequence>)
+// TODO: I don't like returning errors as a second value. Use
+// parse(make(<parser>, source: ...)) instead?
+define generic parse (source :: <object>) => (statements :: <sequence>, errors :: <sequence>);
+
+define method parse (scanner :: <scanner>) => (statements :: <sequence>, errors :: <sequence>)
   let parser = make(<parser>, tokens: scan(scanner));
-  block ()
-    values(parse-expression(parser), parser.%errors)
-  exception (ex :: <parser-error>)
-    // TODO: once we're parsing a sequence of statements, call synchronize to
-    // recover and continue.
-    record-error(parser, ex);
-    values(#f, parser.%errors)
-  end
+  let statements = make(<stretchy-vector>);
+  iterate loop ()
+    let token = peek-token(parser);
+    unless (instance?(token, <eof-token>))
+      block ()
+        let statement = parse-statement(parser);
+        add!(statements, statement);
+      exception (ex :: <parser-error>)
+        record-error(parser, ex);
+        // TODO: synchronize(parser);
+      end;
+      loop();
+    end;
+  end;
+  values(statements, parser.%errors)
 end method;
 
-define method parse (source :: <string>) => (ast :: <expression?>, errors :: <sequence>)
+define method parse (source :: <string>) => (ast :: <sequence>, errors :: <sequence>)
   parse(make(<scanner>, source: source))
 end method;
 
-define method parse (file :: <file-locator>) => (ast :: <expression?>, errors :: <sequence>)
+define method parse (file :: <file-locator>) => (ast :: <sequence>, errors :: <sequence>)
   fs/with-open-file (stream = file)
     parse(make(<scanner>,
                source: io/read-to-end(stream),
@@ -34,7 +39,7 @@ define method parse (file :: <file-locator>) => (ast :: <expression?>, errors ::
   end
 end method;
 
-define method parse (source :: <stream>) => (ast :: <expression?>, errors :: <sequence>)
+define method parse (source :: <stream>) => (ast :: <sequence>, errors :: <sequence>)
   parse(io/read-to-end(source))
 end method;
 
@@ -52,7 +57,9 @@ define function parser-error (p :: <parser>, fmt :: <string>, #rest args)
 end function;
 
 define function record-error (p :: <parser>, err :: <lox-error>) => ()
-  add!(p.%errors, err)
+  add!(p.%errors, err);
+  io/format-err("%s\n", err);
+  io/force-err();
 end function;
 
 define class <parser> (<object>)
@@ -71,15 +78,41 @@ define function peek-token (p :: <parser>) => (t :: <token>)
   end
 end function;
 
-define function consume-token (p :: <parser>) => (t :: <token>)
-  let t = peek-token(p);
-  inc!(p.parser-index);
-  t
+define function consume-token (p :: <parser>, #key expect) => (t :: <token>)
+  let token = peek-token(p);
+  if (~instance?(token, <eof-token>))
+    inc!(p.parser-index);
+  end;
+  if (expect & expect ~= token.%text)
+    parser-error(p, "expected %=", expect)
+  end;
+  token
 end function;
 
 // Return true if any of the tokens match the next token.
 define function next-token-matches (p :: <parser>, #rest strings) => (matched? :: <boolean>)
   member?(p.peek-token.%text, strings, test: \=)
+end function;
+
+define function parse-statement (p :: <parser>) => (s :: <statement>)
+  if (next-token-matches(p, "print"))
+    parse-print-statement(p)
+  else
+    parse-expression-statement(p)
+  end
+end function;
+
+define function parse-print-statement (p :: <parser>) => (s :: <print-statement>)
+  consume-token(p, expect: "print");
+  let expr = parse-expression(p);
+  consume-token(p, expect: ";");
+  make(<print-statement>, expression: expr)
+end function;
+
+define function parse-expression-statement (p :: <parser>) => (s :: <expression-statement>)
+  let expr = parse-expression(p);
+  consume-token(p, expect: ";");
+  make(<expression-statement>, expression: expr)
 end function;
 
 // expression     → equality ;

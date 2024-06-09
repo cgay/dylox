@@ -2,7 +2,7 @@ Module: lox-impl
 
 
 // Main entry point for evaluator.
-define constant <source> = type-union(<string>, <file-locator>, <expression>);
+define constant <source> = type-union(<string>, <file-locator>, <ast>);
 define generic eval (evaluator :: <evaluator>, source :: <source>) => (value);
 
 define class <eval-error> (<lox-error>) end;
@@ -17,39 +17,40 @@ end function;
 
 define class <evaluator> (<object>)
   // not yet: constant slot %top-level-environment :: <table> = make(<table>);
-  constant slot print-errors? = #t,        init-keyword: print-errors?:;
-  constant slot print-s-expressions? = #f, init-keyword: print-s-expressions?:;
+  constant slot print-errors? = #t, init-keyword: print-errors?:;
+  constant slot print-ast? = #f,    init-keyword: print-ast?:;
   slot had-errors? :: <boolean> = #f;
 end class;
 
 define method eval (ev :: <evaluator>, source :: type-union(<string>, <file-locator>)) => (value)
-  let (ast, errors) = parse(source);
+  let (statements :: <sequence>, errors) = parse(source);
   if (ev.print-errors?)
     for (error in errors)
       io/format-err("%s\n", error);
       io/force-err();
     end;
   end;
-  if (ast)
-    if (ev.print-s-expressions?)
-      io/format-out("%=\n", ast.s-expression);
+  let value = unsupplied();
+  for (statement in statements)
+    if (ev.print-ast?)
+      io/format-out("AST: %=\n", statement.s-expression);
       io/force-out();
     end;
     block ()
-      eval(ev, ast)
+      value := eval(ev, statement);
     exception (ex :: <eval-error>)
       had-errors?(ev) := #t;
       if (ev.print-errors?)
         io/format-err("%s\n", ex);
         io/force-err();
       end;
-      #f
-    end
-  end
+    end;
+  end for;
+  value
 end method;
 
-define method eval (ev :: <evaluator>, ast :: <expression>) => (value)
-  eval-error(ev, "unimplemented expression subclass: %=", ast.object-class)
+define method eval (ev :: <evaluator>, ast :: <ast>) => (value)
+  eval-error(ev, "I don't know how to evaluate a %= yet", ast.object-class);
 end method;
 
 define method eval (ev :: <evaluator>, ast :: <literal-expression>) => (value)
@@ -112,6 +113,19 @@ define method eval (ev :: <evaluator>, ast :: <binary-expression>) => (value)
   end
 end method;
 
+// Unlike the book we return the statement's value. We could do it like the
+// book by having separate eval-expression and eval-statement functions.  It
+// would make testing harder and it means you have to use "print" in the REPL
+// to see any values.
+define method eval (ev :: <evaluator>, ast :: <expression-statement>) => (value)
+  eval(ev, ast.%expression)
+end method;
+
+define method eval (ev :: <evaluator>, ast :: <print-statement>) => (value)
+  let value = next-method();
+  io/format-out("%s\n", value);
+  value
+end method;
 
 define function nyi (i, ast)
   eval-error(i, "evaluation of %= AST not yet implemented", ast);

@@ -2,7 +2,19 @@ Module: lox-impl
 
 // Abstract Syntax Tree (AST) representation. Section 5.2+
 
-define abstract class <expression> (<object>) end;
+define abstract class <ast> (<object>) end;
+define abstract class <expression> (<ast>) end;
+define abstract class <statement> (<ast>) end;
+
+// Not an expression, really, but what to name it? An expression followed by a
+// semicolon becomes a statement.
+define class <expression-statement> (<statement>)
+  constant slot %expression :: <expression>, required-init-keyword: expression:;
+end class;
+
+// This matches the book, but we could consider making print a normal function
+// call expression.
+define class <print-statement> (<expression-statement>) end;
 
 define class <unary-expression> (<expression>)
   constant slot %operator :: <token>,   required-init-keyword: operator:;
