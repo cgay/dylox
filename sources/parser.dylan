@@ -179,19 +179,16 @@ define function parse-unary (p :: <parser>) => (e :: <expression>)
 end function;
 
 // primary        → NUMBER | STRING | "true" | "false" | "nil"
-//                | "(" expression ")" ;
+//                | "(" expression ")"
+//                | IDENTIFIER ;
 define function parse-primary (p :: <parser>) => (e :: <expression>)
   let token = consume-token(p);
   if (instance?(token, <literal-token>))
     make(<literal-expression>, value: token.%value)
   elseif (token.%text = "(")
-    let expr = make(<grouping-expression>, value: parse-expression(p));
-    let tok = consume-token(p);
-    if (tok.%text ~= ")")
-      parser-error(p, "expected close paren, got %=", token);
-    else
-      expr
-    end
+    let expr = make(<grouping-expression>, expression: parse-expression(p));
+    let tok = consume-token(p, expect: ")");
+    expr
   else
     parser-error(p, "expected an expression but got %=", token);
   end

@@ -22,6 +22,7 @@ end test;
 
 define test test-eval-precedence ()
   assert-equal(8, %eval("2 * 3 + 4 / 2;"));
+  assert-equal(7, %eval("2*(3+4)/2;"));
   assert-equal(4, %eval("2 * 3 - 2;"));
 end test;
 
