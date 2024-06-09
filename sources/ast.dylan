@@ -6,6 +6,15 @@ define abstract class <ast> (<object>) end;
 define abstract class <expression> (<ast>) end;
 define abstract class <statement> (<ast>) end;
 
+define class <program> (<statement>)
+  constant slot %statements = make(<stretchy-vector>);
+end class;
+
+define class <variable-declaration> (<statement>)
+  constant slot %name :: <token>, required-init-keyword: name:;
+  constant slot %initializer :: <expression>, required-init-keyword: initializer:;
+end class;
+
 // Not an expression, really, but what to name it? An expression followed by a
 // semicolon becomes a statement.
 define class <expression-statement> (<statement>)
@@ -75,7 +84,7 @@ end class;
 
 
 // Convert the AST to s-expression format for testing and REPL display purposes.
-define generic s-expression (ast :: <expression>) => (s-expr :: <object>);
+define generic s-expression (ast :: <ast>) => (s-expr :: <object>);
 
 define method s-expression (ast :: <unary-expression>) => (s-expr :: <sequence>)
   list(ast.%operator.%value, ast.%right.s-expression)
@@ -121,3 +130,18 @@ define method s-expression (ast :: <variable-expression>) => (variable-name :: <
   ast.%name.%value
 end method;
 
+define method s-expression (ast :: <print-statement>) => (s-expr :: <sequence>)
+  list(#"print", ast.%expression.s-expression)
+end method;
+
+define method s-expression (ast :: <expression-statement>) => (s-expr :: <sequence>)
+  ast.%expression.s-expression
+end method;
+
+define method s-expression (ast :: <program>) => (s-expr :: <sequence>)
+  list(#"program", map(s-expression, ast.%statements))
+end method;
+
+define method s-expression (ast :: <variable-declaration>) => (s-expr :: <sequence>)
+  list(#"var", ast.%name.%value, ast.%initializer.s-expression)
+end method;

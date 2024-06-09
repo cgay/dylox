@@ -16,7 +16,7 @@ end function;
 
 
 define class <evaluator> (<object>)
-  // not yet: constant slot %top-level-environment :: <table> = make(<table>);
+  constant slot %environment :: <environment> = make(<environment>);
   constant slot print-errors? = #t, init-keyword: print-errors?:;
   constant slot print-ast? = #f,    init-keyword: print-ast?:;
   slot had-errors? :: <boolean> = #f;
@@ -164,5 +164,22 @@ define method eval (ev :: <evaluator>, ast :: <this-expression>) => (value)
 end method;
 
 define method eval (ev :: <evaluator>, ast :: <variable-expression>) => (value)
-  nyi(ev, ast);
+  get-variable(ev.%environment, ast.%name.%value)
+    | eval-error(ev, "undefined variable %=", ast.%name.%value)
+end method;
+
+define method eval (ev :: <evaluator>, ast :: <variable-declaration>) => (value)
+  set-variable(ev.%environment, ast.%name.%value, eval(ev, ast.%initializer))
+end method;
+
+define class <environment> (<object>)
+  constant slot %values = make(<table>); // <symbol> => <object>
+end class;
+
+define method set-variable (env :: <environment>, name :: <symbol>, value) => (value)
+  env.%values[name] := value
+end method;
+
+define method get-variable (env :: <environment>, name :: <symbol>) => (value)
+  element(env.%values, name, default: #f)
 end method;

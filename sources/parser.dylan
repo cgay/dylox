@@ -14,13 +14,8 @@ define method parse (scanner :: <scanner>) => (statements :: <sequence>, errors 
   iterate loop ()
     let token = peek-token(parser);
     unless (instance?(token, <eof-token>))
-      block ()
-        let statement = parse-statement(parser);
-        add!(statements, statement);
-      exception (ex :: <parser-error>)
-        record-error(parser, ex);
-        // TODO: synchronize(parser);
-      end;
+      let statement = parse-declaration(parser); // #f if synchronize called
+      statement & add!(statements, statement);
       loop();
     end;
   end;
@@ -83,7 +78,10 @@ define function consume-token (p :: <parser>, #key expect) => (t :: <token>)
   if (~instance?(token, <eof-token>))
     inc!(p.parser-index);
   end;
-  if (expect & expect ~= token.%text)
+  if (expect & ~ select (expect by instance?)
+                   <string> => token.%text = expect;
+                   <class> => instance?(token, expect);
+                 end)
     parser-error(p, "expected %=", expect)
   end;
   token
@@ -92,6 +90,33 @@ end function;
 // Return true if any of the tokens match the next token.
 define function next-token-matches (p :: <parser>, #rest strings) => (matched? :: <boolean>)
   member?(p.peek-token.%text, strings, test: \=)
+end function;
+
+define function parse-declaration (p :: <parser>) => (d :: false-or(<statement>))
+  block () 
+    if (next-token-matches(p, "var"))
+      consume-token(p);
+      parse-variable-declaration(p)
+    else
+      parse-statement(p)
+    end
+  exception (ex :: <parser-error>)
+    record-error(p, ex);
+    synchronize(p);
+    #f
+  end
+end function;
+
+define function parse-variable-declaration (p :: <parser>) => (s :: <variable-declaration>)
+  let token = consume-token(p, expect: <identifier-token>);
+  let init = if (next-token-matches(p, "="))
+               consume-token(p);
+               parse-expression(p)
+             else
+               make(<literal-expression>, value: $nil) // The book uses Java null here.
+             end;
+  consume-token(p, expect: ";");
+  make(<variable-declaration>, name: token, initializer: init)
 end function;
 
 define function parse-statement (p :: <parser>) => (s :: <statement>)
@@ -185,6 +210,8 @@ define function parse-primary (p :: <parser>) => (e :: <expression>)
   let token = consume-token(p);
   if (instance?(token, <literal-token>))
     make(<literal-expression>, value: token.%value)
+  elseif (instance?(token, <identifier-token>))
+    make(<variable-expression>, name: token)
   elseif (token.%text = "(")
     let expr = make(<grouping-expression>, expression: parse-expression(p));
     let tok = consume-token(p, expect: ")");
@@ -196,7 +223,6 @@ end function;
 
 
 // Consume tokens until we get to the next statement.
-/* not yet:
 define function synchronize (p :: <parser>) => (token :: <token>)
   // The book checks for SEMICOLON first but I don't see why it's necessary so
   // I'm leaving it out for now. Will it come back to bite me?
@@ -210,4 +236,3 @@ define function synchronize (p :: <parser>) => (token :: <token>)
     end
   end
 end function;
-*/
