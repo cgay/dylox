@@ -25,12 +25,12 @@ define module lox-impl
 
   use common-dylan;
   use file-system, prefix: "fs/";
-  use format, prefix: "io/";
-  use format-out, prefix: "io/";
+  use format,      prefix: "io/";
+  use format-out,  prefix: "io/";
   use locators;
-  use print, prefix: "io/";
+  use print,       prefix: "io/";
   use standard-io;
-  use streams, prefix: "io/";
+  use streams,     prefix: "io/";
   use strings;
   use uncommon-utils;
 

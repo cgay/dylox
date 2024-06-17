@@ -140,9 +140,26 @@ define function parse-expression-statement (p :: <parser>) => (s :: <expression-
   make(<expression-statement>, expression: expr)
 end function;
 
-// expression     → equality ;
+// expression     → assignment ;
 define function parse-expression (p :: <parser>) => (e :: <expression>)
-  parse-equality(p)
+  parse-assignment(p)
+end function;
+
+// assignment     → IDENTIFIER "=" assignment
+//                | equality ;
+define function parse-assignment (p :: <parser>) => (e :: <expression>)
+  let expr = parse-equality(p);
+  if (~next-token-matches(p, "="))
+    expr
+  else
+    let equal = consume-token(p);
+    let value-expr = parse-assignment(p);
+    if (instance?(expr, <variable-expression>))
+      make(<assignment-expression>, name: expr.%name, value: value-expr)
+    else
+      parser-error(p, "invalid assignment target %=", equal);
+    end
+  end
 end function;
 
 // equality       → comparison ( ( "!=" | "==" ) comparison )* ;

@@ -109,8 +109,12 @@ define class <comment-token>       (<token>) end;
 define class <eof-token>           (<token>) end;
 
 define method io/print-object (token :: <token>, stream :: <stream>) => ()
-  io/printing-object (token, stream)
-    io/format(stream, "%s %= line:%d", token.%text, token.%value, token.%line);
+  if (io/*print-escape?*)  // */ https://github.com/dylan-lang/dylan-emacs-support/issues/36
+    io/printing-object (token, stream)
+      io/format(stream, "%= (L%d)", token.%text, token.%line);
+    end;
+  else
+    io/format(stream, "%= (line %d)", token.%text, token.%line);
   end;
 end method;
 

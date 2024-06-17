@@ -7,12 +7,22 @@ define generic eval (evaluator :: <evaluator>, source :: <source>) => (value);
 
 define class <eval-error> (<lox-error>) end;
 
-define function eval-error (i :: <evaluator>, fmt :: <string>, #rest args)
-  let format-string = concatenate("runtime error: ", fmt);
-  signal(make(<eval-error>,
-              format-string: format-string,
-              format-arguments: args))
+define function eval-error (ev :: <evaluator>, fmt :: <string>, #rest args)
+  signal(make(<eval-error>, format-string: fmt, format-arguments: args))
 end function;
+
+
+define class <environment> (<object>)
+  constant slot %values = make(<table>); // <symbol> => <object>
+end class;
+
+define method set-variable (env :: <environment>, name :: <symbol>, value) => (value)
+  env.%values[name] := value
+end method;
+
+define method get-variable (env :: <environment>, name :: <symbol>) => (value)
+  element(env.%values, name, default: #f)
+end method;
 
 
 define class <evaluator> (<object>)
@@ -139,10 +149,6 @@ define method eval (ev :: <evaluator>, ast :: <logical-expression>) => (value)
   nyi(ev, ast);
 end method;
 
-define method eval (ev :: <evaluator>, ast :: <assignment-expression>) => (value)
-  nyi(ev, ast);
-end method;
-
 define method eval (ev :: <evaluator>, ast :: <call-expression>) => (value)
   nyi(ev, ast);
 end method;
@@ -165,21 +171,17 @@ end method;
 
 define method eval (ev :: <evaluator>, ast :: <variable-expression>) => (value)
   get-variable(ev.%environment, ast.%name.%value)
-    | eval-error(ev, "undefined variable %=", ast.%name.%value)
+    | eval-error(ev, "attempt to read undefined variable %=", ast.%name.%value)
 end method;
 
 define method eval (ev :: <evaluator>, ast :: <variable-declaration>) => (value)
   set-variable(ev.%environment, ast.%name.%value, eval(ev, ast.%initializer))
 end method;
 
-define class <environment> (<object>)
-  constant slot %values = make(<table>); // <symbol> => <object>
-end class;
-
-define method set-variable (env :: <environment>, name :: <symbol>, value) => (value)
-  env.%values[name] := value
-end method;
-
-define method get-variable (env :: <environment>, name :: <symbol>) => (value)
-  element(env.%values, name, default: #f)
+define method eval (ev :: <evaluator>, ast :: <assignment-expression>) => (value)
+  let name = ast.%name.%value;
+  if (~get-variable(ev.%environment, name))
+    eval-error(ev, "attempt to set undefined variable %=", ast.%name);
+  end;
+  set-variable(ev.%environment, name, eval(ev, ast.%value));
 end method;
