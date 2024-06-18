@@ -15,7 +15,7 @@ end class;
 define method create-variable
     (ev :: <evaluator>, env :: <environment>, name :: <symbol>, value) => (value)
   if (has-variable?(env, name))
-    eval-error(ev, "variable already exists: '%s'", name);
+    runtime-error(ev, "variable already exists: '%s'", name);
   else
     env.%values[name] := value
   end
@@ -49,7 +49,7 @@ define method get-variable
     (ev :: <evaluator>, env :: <global-environment>, name :: <symbol>) => (value)
   let value = next-method();
   if (unsupplied?(value))
-    eval-error(ev, "unbound variable '%s'", name);
+    runtime-error(ev, "unbound variable '%s'", name);
   else
     value
   end

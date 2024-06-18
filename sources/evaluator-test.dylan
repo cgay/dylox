@@ -32,8 +32,8 @@ define test test-eval-program ()
 end test;
 
 define test test-eval-environments ()
-  assert-signals(<eval-error>, %eval("a;"), "undefined variable");
-  assert-signals(<eval-error>, %eval("var b=2; var b=3; b;"), "variable already exists");
+  assert-signals(<runtime-error>, %eval("a;"), "undefined variable");
+  assert-signals(<runtime-error>, %eval("var b=2; var b=3; b;"), "variable already exists");
   assert-equal(3.0d0, %eval("var c = 3; c;"));
   assert-equal("xy", %eval("""var d = "x"; var e = "y"; d + e;"""));
 end test;

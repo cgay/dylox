@@ -7,10 +7,10 @@ define generic eval
     (evaluator :: <evaluator>, source :: <source>, environment :: <environment>)
  => (value);
 
-define class <eval-error> (<lox-error>) end;
+define class <runtime-error> (<lox-error>) end;
 
-define function eval-error (ev :: <evaluator>, fmt :: <string>, #rest args)
-  signal(make(<eval-error>, format-string: fmt, format-arguments: args))
+define function runtime-error (ev :: <evaluator>, fmt :: <string>, #rest args)
+  signal(make(<runtime-error>, format-string: fmt, format-arguments: args))
 end function;
 
 define class <evaluator> (<object>)
@@ -45,7 +45,7 @@ define method eval
     end;
     block ()
       return-value := eval(ev, statement, env);
-    exception (ex :: <eval-error>)
+    exception (ex :: <runtime-error>)
       had-errors?(ev) := #t;
       if (ev.print-errors?)
         io/format-err("%s\n", ex);
@@ -57,7 +57,7 @@ define method eval
 end method;
 
 define method eval (ev :: <evaluator>, ast :: <ast>, env :: <environment>) => (value)
-  eval-error(ev, "I don't know how to evaluate a %= yet", ast.object-class);
+  runtime-error(ev, "I don't know how to evaluate a %= yet", ast.object-class);
 end method;
 
 define method eval
@@ -78,8 +78,8 @@ define method eval
     #"!" =>
       ~truthy?(eval(ev, ast.%right, env));
     otherwise =>
-      eval-error(ev, "expected either '-' or '!' for unary operator, got %=",
-                 ast.%operator);
+      runtime-error(ev, "expected either '-' or '!' for unary operator, got %=",
+                    ast.%operator);
   end
 end method;
 
@@ -94,8 +94,8 @@ define method eval
   let op = ast.%operator.%value;
   local method check (type, value)
           if (~instance?(value, type))
-            eval-error(ev, "invalid type for %= operation: got %=, want %=",
-                       op, value.object-class, type);
+            runtime-error(ev, "invalid type for %= operation: got %=, want %=",
+                          op, value.object-class, type);
           end;
           value
         end;
@@ -109,9 +109,8 @@ define method eval
       elseif (instance?(left, <string>) & instance?(right, <string>))
         concatenate(left, right)
       else
-        eval-error(ev,
-                   "invalid types in %= + %=, operands must both be string or both numbers",
-                   left, right)
+        runtime-error(ev, "invalid types in %= + %=, operands must both be"
+                        " string or both numbers", left, right)
       end;
     #">"  => check(<double-float>, left) >  check(<double-float>, right);
     #">=" => check(<double-float>, left) >= check(<double-float>, right);
@@ -120,7 +119,7 @@ define method eval
     #"!=" => left ~= right;
     #"==" => left = right;
     otherwise =>
-      eval-error(ev, "unexpected binary operator: %s", ast.%operator.%value);
+      runtime-error(ev, "unexpected binary operator: %s", ast.%operator.%value);
   end
 end method;
 
@@ -141,7 +140,7 @@ define method eval
 end method;
 
 define function nyi (i, ast)
-  eval-error(i, "evaluation of %= AST not yet implemented", ast);
+  runtime-error(i, "evaluation of %= AST not yet implemented", ast);
 end function;
 
 define method eval
