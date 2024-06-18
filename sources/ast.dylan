@@ -51,11 +51,13 @@ define class <call-expression> (<expression>)
   constant slot %arguments :: <sequence>, required-init-keyword: arguments:;
 end class;
 
+// Get a field value.
 define class <get-expression> (<expression>)
   constant slot %object :: <expression>, required-init-keyword: object:;
   constant slot %name :: <token>,        required-init-keyword: name:;
 end class;
 
+// Set a field value.
 define class <set-expression> (<get-expression>)
   constant slot %value :: <expression>, required-init-keyword: value:;
 end class;

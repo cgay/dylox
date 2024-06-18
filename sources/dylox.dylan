@@ -5,7 +5,7 @@ define function main
   let ev = make(<evaluator>);
   select (arguments.size)
     0 => repl(ev);
-    1 => printf("%s\n", eval(ev, as(<file-locator>, arguments.first)));
+    1 => printf("%s\n", eval-top-level(ev, as(<file-locator>, arguments.first)));
     otherwise =>
       io/format-err("Usage: %s [script-file]\n", name);
       exit-application(64);
@@ -19,7 +19,7 @@ define function repl (ev :: <evaluator>) => ()
     // Simulate Java's InputStreamReader.readLine by returning #f on end of stream (C-d).
     let line = io/read-line(*standard-input*, on-end-of-stream: #f);
     if (line)
-      let value = eval(ev, line);
+      let value = eval-top-level(ev, line);
       if (supplied?(value))
         printf("=> %s\n", value);
       end;

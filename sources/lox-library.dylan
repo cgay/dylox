@@ -17,7 +17,7 @@ define module lox
     <lox-error>,
     <scanner>, <scanner-error>, scan,
     <parser>, <parser-error>, parse,
-    <evaluator>, <eval-error>, eval, had-errors?;
+    <evaluator>, <eval-error>, eval, eval-top-level, had-errors?;
 end module;
 
 define module lox-impl
@@ -40,5 +40,6 @@ define module lox-impl
     <expression>,
     parse-expression,
     scan-tokens,
-    s-expression;
+    s-expression,
+    <environment>, <global-environment>, <lexical-environment>;
 end module;
