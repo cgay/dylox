@@ -3,12 +3,7 @@ Module: lox-impl
 // Recursive descent parser for Lox grammar.
 
 // Main parsing entry point.
-
-// TODO: I don't like returning errors as a second value. Use
-// parse(make(<parser>, source: ...)) instead?
-define generic parse (source :: <object>) => (statements :: <sequence>, errors :: <sequence>);
-
-define method parse (scanner :: <scanner>) => (statements :: <sequence>, errors :: <sequence>)
+define function parse (scanner :: <scanner>) => (statements :: <sequence>)
   let parser = make(<parser>, tokens: scan(scanner));
   let statements = make(<stretchy-vector>);
   iterate loop ()
@@ -19,26 +14,8 @@ define method parse (scanner :: <scanner>) => (statements :: <sequence>, errors 
       loop();
     end;
   end;
-  values(statements, parser.%errors)
-end method;
-
-define method parse (source :: <string>) => (ast :: <sequence>, errors :: <sequence>)
-  parse(make(<scanner>, source: source))
-end method;
-
-define method parse (file :: <file-locator>) => (ast :: <sequence>, errors :: <sequence>)
-  fs/with-open-file (stream = file)
-    parse(make(<scanner>,
-               source: io/read-to-end(stream),
-               file: file))
-  end
-end method;
-
-define method parse (source :: <stream>) => (ast :: <sequence>, errors :: <sequence>)
-  parse(io/read-to-end(source))
-end method;
-
-
+  statements
+end function;
 
 define class <parser-error> (<lox-error>) end;
 
@@ -93,17 +70,19 @@ define function next-token-matches (p :: <parser>, #rest strings) => (matched? :
 end function;
 
 define function parse-declaration (p :: <parser>) => (d :: false-or(<statement>))
-  block () 
-    if (next-token-matches(p, "var"))
-      consume-token(p);
-      parse-variable-declaration(p)
-    else
-      parse-statement(p)
-    end
-  exception (ex :: <parser-error>)
-    record-error(p, ex);
-    synchronize(p);
-    #f
+  let handler <parser-error>
+    = method (err, next-handler)
+        record-error(p, err);
+        synchronize(p);
+        // Decline to handle the error so that our higher-level handler can
+        // decide whether or not to continue.
+        next-handler()
+      end;
+  if (next-token-matches(p, "var"))
+    consume-token(p);
+    parse-variable-declaration(p)
+  else
+    parse-statement(p)
   end
 end function;
 

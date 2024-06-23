@@ -2,10 +2,49 @@ Module: lox-impl
 
 
 // Main entry point for evaluator.
-define constant <source> = type-union(<string>, <file-locator>, <ast>);
-define generic eval
-    (evaluator :: <evaluator>, source :: <source>, environment :: <environment>)
- => (value);
+
+// Evaluate something in the top-level (global) context. This is the main external
+// interface used by the dylox command so it's where the source is parsed and errors are
+// handled. If die-on-error? is true then errors are signalled immediately with no
+// attempt to recover. origin identifies the program source, such as a file name.
+define function eval-top-level
+    (ev :: <evaluator>, source :: <string>,
+     #key die-on-error? :: <boolean>,
+          origin :: <string> = "<stdin>")
+ => (value)
+  let handler <runtime-error>
+    = method (err, next-handler)
+        had-errors?(ev) := #t;
+        if (ev.print-errors?)
+          io/format-err("%s\n", err);
+          io/force-err();
+        end;
+        if (die-on-error?)
+          next-handler();       // decline to handle it
+        end;
+      end;
+  // See also the <parser-error> handler in the parser.
+  let handler (<parser-error>, test: method (c) ~die-on-error? end) = always(#f);
+
+  let scanner = make(<scanner>,
+                     source: source,
+                     origin: origin);
+  let statements :: <sequence> = parse(scanner);
+  let value = $nil;
+  for (statement in statements)
+    if (ev.print-ast?)
+      io/format-out("AST: %=\n", statement.s-expression);
+      io/force-out();
+    end;
+    value := eval(ev, statement, ev.%environment);
+    if (ev.print-ast?)
+      io/format-out("==> %=\n", value);
+      io/force-out();
+    end;
+  end;
+  value
+end function;
+
 
 define class <runtime-error> (<lox-error>) end;
 
@@ -20,41 +59,9 @@ define class <evaluator> (<object>)
   slot had-errors? :: <boolean> = #f;
 end class;
 
-// Evaluate something in the top-level (global) context.
-define function eval-top-level
-    (ev :: <evaluator>, source :: <source>) => (value)
-  eval(ev, source, ev.%environment)
-end function;
-
-define method eval
-    (ev :: <evaluator>, source :: type-union(<string>, <file-locator>), env :: <environment>)
- => (value)
-  let (statements :: <sequence>, errors) = parse(source);
-  if (ev.print-errors?)
-    for (error in errors)
-      io/format-err("%s\n", error);
-      io/force-err();
-    end;
-  end;
-  let return-value = unsupplied();
-  let env = make(<lexical-environment>, parent: ev.%environment);
-  for (statement in statements)
-    if (ev.print-ast?)
-      io/format-out("AST: %=\n", statement.s-expression);
-      io/force-out();
-    end;
-    block ()
-      return-value := eval(ev, statement, env);
-    exception (ex :: <runtime-error>)
-      had-errors?(ev) := #t;
-      if (ev.print-errors?)
-        io/format-err("%s\n", ex);
-        io/force-err();
-      end;
-    end;
-  end for;
-  return-value
-end method;
+define generic eval
+    (evaluator :: <evaluator>, ast :: <ast>, environment :: <environment>)
+ => (value);
 
 define method eval (ev :: <evaluator>, ast :: <ast>, env :: <environment>) => (value)
   runtime-error(ev, "I don't know how to evaluate a %= yet", ast.object-class);

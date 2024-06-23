@@ -2,10 +2,10 @@ Module: lox-test-suite
 
 
 define function %scan (source :: <string>) => (token-types :: <sequence>)
-  map(%value, scan-tokens(make(<scanner>, source: source)))
+  map(%value, scan(make(<scanner>, source: source)))
 end function;
 
-define test test-scan-tokens ()
+define test test-scan ()
   assert-equal(list(#"!=", #"eof"),
                %scan("!="),
                "one token");

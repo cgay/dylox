@@ -3,7 +3,7 @@ Module: lox-test-suite
 
 define function %parse (source :: <string>) => (ast :: <expression>)
   let scanner = make(<scanner>, source: source);
-  let tokens = scan-tokens(scanner);
+  let tokens = scan(scanner);
   parse-expression(make(<parser>, tokens: tokens))
 end function;
 

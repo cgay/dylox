@@ -3,8 +3,8 @@ Module: lox-test-suite
 
 define function %eval
     (source :: <string>, #key env = make(<global-environment>)) => (value)
-  let statements = parse(source);
-  let ev = make(<evaluator>, print-errors?: #t, print-ast?: #t);
+  let statements = parse(make(<scanner>, source: source));
+  let ev = make(<evaluator>, print-errors?: #t, print-ast?: #t, signal-on-error?: #t);
   let val = unsupplied();
   for (statement in statements)
     val := eval(ev, statement, env);

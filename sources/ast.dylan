@@ -86,9 +86,16 @@ end class;
 
 
 // Convert the AST to s-expression format for testing and REPL display purposes.
-define generic s-expression (ast :: <ast>) => (s-expr :: <object>);
+define generic s-expression (ast :: <object>) => (s-expr :: <object>);
+
+// Default method to handle statements that parse to literals, like "4;".
+define method s-expression (ast :: <object>) => (s-expr :: <object>)
+  ast
+end method;
 
 define method s-expression (ast :: <unary-expression>) => (s-expr :: <sequence>)
+  io/format-out("<unary-expression> %=\n", ast);
+  io/force-out();
   list(ast.%operator.%value, ast.%right.s-expression)
 end method;
 
@@ -124,7 +131,7 @@ define method s-expression (ast :: <super-expression>) => (s-expr :: <sequence>)
   list(ast.%keyword.%value, ast.%method.%value)
 end method;
 
-define method s-expression (ast :: <this-expression>) => (s-expr :: <sequence>)
+define method s-expression (ast :: <this-expression>) => (s-expr)
   ast.%keyword.%value
 end method;
 
@@ -136,7 +143,7 @@ define method s-expression (ast :: <print-statement>) => (s-expr :: <sequence>)
   list(#"print", ast.%expression.s-expression)
 end method;
 
-define method s-expression (ast :: <expression-statement>) => (s-expr :: <sequence>)
+define method s-expression (ast :: <expression-statement>) => (s-expr)
   ast.%expression.s-expression
 end method;
 

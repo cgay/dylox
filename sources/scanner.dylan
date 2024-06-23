@@ -2,22 +2,17 @@ Module: lox-impl
 
 
 // Main scanner entry point.
-define generic scan (source :: <object>) => (tokens :: <sequence>);
-
-define method scan (scanner :: <scanner>) => (tokens :: <sequence>)
-  scan-tokens(scanner)
-end method;
-
-define method scan (source :: <string>) => (tokens :: <sequence>)
-  scan(make(<scanner>, source: source))
-end method;
-
-define method scan (file :: <file-locator>) => (tokens :: <sequence>)
-  let source = fs/with-open-file(stream = file)
-                 io/read-to-end(stream)
-               end;
-  scan(make(<scanner>, source: source, file: file))
-end method;
+define function scan (scanner :: <scanner>) => (tokens :: <sequence>)
+  let tokens = make(<stretchy-vector>);
+  iterate loop ()
+    let token = scan-token(scanner);
+    add!(tokens, token);
+    if (~instance?(token, <eof-token>))
+      loop()
+    end;
+  end;
+  tokens
+end function;
 
 
 define constant $reserved-words
@@ -28,7 +23,7 @@ define constant $nil = #"nil";
 
 define class <scanner> (<object>)
   constant slot %source :: <string>, required-init-keyword: source:;
-  constant slot %file :: false-or(<file-locator>) = #f, init-keyword: file:;
+  constant slot %origin :: <string> = "<stdin>", init-keyword: origin:;
   slot %line :: <integer> = 1;
   slot %token-start :: <integer> = 0; // book calls this start
   slot %index :: <integer> = 0;       // book calls this current
@@ -41,7 +36,7 @@ end class;
 define method condition-to-string (err :: <scanner-error>) => (s :: <string>)
   let scanner = err.%scanner;
   let fmt = concatenate("%s:%d: ", err.condition-format-string);
-  let args = concatenate(list(scanner.%file | "<stdin>", scanner.%line),
+  let args = concatenate(list(scanner.%origin, scanner.%line),
                          err.condition-format-arguments);
   apply(io/format-to-string, fmt, args)
 end method;
@@ -72,7 +67,7 @@ end function;
 
 define method consume (scanner :: <scanner>) => (c :: <character>)
   let c = peek(scanner)
-    | scanner-error(scanner, "unexpected end of file");
+    | scanner-error(scanner, "unexpected end of input");
   inc!(scanner.%index);
   c
 end method;
@@ -117,18 +112,6 @@ define method io/print-object (token :: <token>, stream :: <stream>) => ()
     io/format(stream, "%= (line %d)", token.%text, token.%line);
   end;
 end method;
-
-define function scan-tokens (scanner :: <scanner>) => (tokens :: <sequence>)
-  let tokens = make(<stretchy-vector>);
-  iterate loop ()
-    let token = scan-token(scanner);
-    add!(tokens, token);
-    if (~instance?(token, <eof-token>))
-      loop()
-    end;
-  end;
-  tokens
-end function;
 
 define function scan-token (scanner :: <scanner>) => (t :: <token>)
   local
