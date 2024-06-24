@@ -35,14 +35,14 @@ define function record-error (p :: <parser>, err :: <lox-error>) => ()
 end function;
 
 define class <parser> (<object>)
-  constant slot parser-tokens :: <sequence>, required-init-keyword: tokens:;
-           slot parser-index :: <integer> = 0;
+  constant slot %tokens :: <sequence>, required-init-keyword: tokens:;
+           slot %index :: <integer> = 0;
   constant slot %errors :: <sequence> = make(<stretchy-vector>);
 end class;
 
 define function peek-token (p :: <parser>) => (t :: <token>)
-  let tokens = p.parser-tokens;
-  let index = p.parser-index;
+  let tokens = p.%tokens;
+  let index = p.%index;
   if (index >= tokens.size)
     tokens.last                 // always EOF
   else
@@ -53,7 +53,7 @@ end function;
 define function consume-token (p :: <parser>, #key expect) => (t :: <token>)
   let token = peek-token(p);
   if (~instance?(token, <eof-token>))
-    inc!(p.parser-index);
+    inc!(p.%index);
   end;
   if (expect & ~ select (expect by instance?)
                    <string> => token.%text = expect;

@@ -24,9 +24,9 @@ define constant $nil = #"nil";
 define class <scanner> (<object>)
   constant slot %source :: <string>, required-init-keyword: source:;
   constant slot %origin :: <string> = "<stdin>", init-keyword: origin:;
-  slot %line :: <integer> = 1;
+  slot %line        :: <integer> = 1;
   slot %token-start :: <integer> = 0; // book calls this start
-  slot %index :: <integer> = 0;       // book calls this current
+  slot %index       :: <integer> = 0; // book calls this current
 end class;
 
 define class <scanner-error> (<lox-error>)
