@@ -146,6 +146,15 @@ define method eval
   value
 end method;
 
+define method eval (ev :: <evaluator>, ast :: <block>, env :: <environment>) => (value)
+  let block-env = make(<lexical-environment>, parent: env);
+  let result = $nil;
+  for (statement in ast.%statements)
+    result := eval(ev, statement, block-env);
+  end;
+  result
+end method;
+
 define function nyi (i, ast)
   runtime-error(i, "evaluation of %= AST not yet implemented", ast);
 end function;

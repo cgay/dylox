@@ -14,29 +14,33 @@ end class;
 
 define method create-variable
     (ev :: <evaluator>, env :: <environment>, name :: <symbol>, value) => (value)
-  if (has-variable?(env, name))
-    runtime-error(ev, "variable already exists: '%s'", name);
+  if (locally-bound?(env, name))
+    runtime-error(ev, "variable already exists: %=", as(<string>, name));
   else
     env.%values[name] := value
   end
 end method;
-
-// Note for now we have no way to set variables in a containing scope, due to
-// the way has-variable? is defined. We'll need to change that to return the
-// environment in which it is defined, or #f, instead.
 
 define method set-variable
-    (ev :: <evaluator>, env :: <environment>, name :: <symbol>, value) => (value)
-  if (has-variable?(env, name))
+    (ev :: <evaluator>, env :: <lexical-environment>, name :: <symbol>, value) => (value)
+  if (locally-bound?(env, name))
     env.%values[name] := value
   else
-    error("attempt to assign undefined variable '%s'", name)
+    set-variable(ev, env.%parent, name, value)
   end
 end method;
 
-// Only check the immediate scope, for now.
-define function has-variable?
-    (env :: <environment>, name :: <symbol>) => (b :: <boolean>)
+define method set-variable
+    (ev :: <evaluator>, env :: <global-environment>, name :: <symbol>, value) => (value)
+  if (locally-bound?(env, name))
+    env.%values[name] := value
+  else
+    runtime-error(ev, "attempt to assign undefined variable %=", as(<string>, name));
+  end
+end method;
+
+define inline function locally-bound?
+    (env :: <environment>, name :: <symbol>) => (bound? :: <boolean>)
   supplied?(element(env.%values, name, default: unsupplied()))
 end function;
 

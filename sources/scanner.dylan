@@ -87,7 +87,7 @@ end function;
 define class <token> (<object>)
   constant slot %text  :: <string>,  required-init-keyword: text:;
   constant slot %line  :: <integer>, required-init-keyword: line:;
-  // %value is a symbol for most reserved words, all operator, and all punctuation.
+  // %value is a symbol for most reserved words, all operators, and all punctuation.
   // For other token classes see scan-token, below.
   constant slot %value :: <object>, required-init-keyword: value:;
 end class;

@@ -10,7 +10,9 @@ define function parse (scanner :: <scanner>) => (statements :: <sequence>)
     let token = peek-token(parser);
     unless (instance?(token, <eof-token>))
       let statement = parse-declaration(parser); // #f if synchronize called
-      statement & add!(statements, statement);
+      if (statement)
+        add!(statements, statement);
+      end;
       loop();
     end;
   end;
@@ -75,7 +77,7 @@ define function parse-declaration (p :: <parser>) => (d :: false-or(<statement>)
         record-error(p, err);
         synchronize(p);
         // Decline to handle the error so that our higher-level handler can
-        // decide whether or not to continue.
+        // decide whether or not to continue (by returning #f).
         next-handler()
       end;
   if (next-token-matches(p, "var"))
@@ -98,11 +100,14 @@ define function parse-variable-declaration (p :: <parser>) => (s :: <variable-de
   make(<variable-declaration>, name: token, initializer: init)
 end function;
 
+// statement      → exprStmt
+//                | printStmt
+//                | block ;
 define function parse-statement (p :: <parser>) => (s :: <statement>)
-  if (next-token-matches(p, "print"))
-    parse-print-statement(p)
-  else
-    parse-expression-statement(p)
+  case
+    next-token-matches(p, "print") => parse-print-statement(p);
+    next-token-matches(p, "{")     => parse-block(p);
+    otherwise                      => parse-expression-statement(p);
   end
 end function;
 
@@ -111,6 +116,27 @@ define function parse-print-statement (p :: <parser>) => (s :: <print-statement>
   let expr = parse-expression(p);
   consume-token(p, expect: ";");
   make(<print-statement>, expression: expr)
+end function;
+
+// block          → "{" declaration* "}" ;
+define function parse-block (p :: <parser>) => (b :: <block>)
+  consume-token(p, expect: "{");
+  let statements = make(<stretchy-vector>);
+  iterate loop ()
+    let token = peek-token(p);
+    if (instance?(token, <eof-token>))
+      // Explicitly checking for EOF hopefully gives a friendlier error message.
+      parser-error(p, "end of input while parsing a block");
+    elseif (token.%value ~== #"}")
+      let statement = parse-declaration(p); // #f if synchronize called
+      if (statement)
+        add!(statements, statement);
+      end;
+      loop();
+    end;
+  end;
+  consume-token(p, expect: "}");
+  make(<block>, statements: statements)
 end function;
 
 define function parse-expression-statement (p :: <parser>) => (s :: <expression-statement>)

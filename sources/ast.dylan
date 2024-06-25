@@ -6,8 +6,14 @@ define abstract class <ast> (<object>) end;
 define abstract class <expression> (<ast>) end;
 define abstract class <statement> (<ast>) end;
 
+define class <block> (<statement>)
+  constant slot %statements, required-init-keyword: statements:;
+end class;
+
+// TODO: I added this earlier than the book did it. Should it now inherit from
+// <block>? Will it be used at all?
 define class <program> (<statement>)
-  constant slot %statements = make(<stretchy-vector>);
+  constant slot %statements, required-init-keyword: statements:;
 end class;
 
 define class <variable-declaration> (<statement>)
@@ -148,7 +154,11 @@ define method s-expression (ast :: <expression-statement>) => (s-expr)
 end method;
 
 define method s-expression (ast :: <program>) => (s-expr :: <sequence>)
-  list(#"program", map(s-expression, ast.%statements))
+  list(#"program", map-as(<list>, s-expression, ast.%statements))
+end method;
+
+define method s-expression (ast :: <block>) => (s-expr :: <sequence>)
+  list(#"block", map-as(<list>, s-expression, ast.%statements))
 end method;
 
 define method s-expression (ast :: <variable-declaration>) => (s-expr :: <sequence>)
