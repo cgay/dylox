@@ -101,14 +101,32 @@ define function parse-variable-declaration (p :: <parser>) => (s :: <variable-de
 end function;
 
 // statement      → exprStmt
+//                | ifStmt
 //                | printStmt
 //                | block ;
 define function parse-statement (p :: <parser>) => (s :: <statement>)
   case
+    next-token-matches(p, "if")    => parse-if-statement(p);
     next-token-matches(p, "print") => parse-print-statement(p);
     next-token-matches(p, "{")     => parse-block(p);
     otherwise                      => parse-expression-statement(p);
   end
+end function;
+
+// ifStmt         → "if" "(" expression ")" statement
+//                ( "else" statement )? ;
+define function parse-if-statement (p :: <parser>) => (s :: <if-statement>)
+  consume-token(p, expect: "if");
+  consume-token(p, expect: "(");
+  let test-expr = parse-expression(p);
+  consume-token(p, expect: ")");
+  make(<if-statement>,
+       test: test-expr,
+       then: parse-statement(p),
+       else: if (peek-token(p).%value == #"else")
+               consume-token(p);
+               parse-statement(p)
+             end)
 end function;
 
 define function parse-print-statement (p :: <parser>) => (s :: <print-statement>)

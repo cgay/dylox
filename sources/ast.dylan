@@ -16,6 +16,12 @@ define class <program> (<statement>)
   constant slot %statements, required-init-keyword: statements:;
 end class;
 
+define class <if-statement> (<statement>)
+  constant slot %test :: <expression>, required-init-keyword: test:;
+  constant slot %then :: <statement>, required-init-keyword: then:;
+  constant slot %else :: false-or(<statement>), required-init-keyword: else:;
+end class;
+
 define class <variable-declaration> (<statement>)
   constant slot %name :: <token>, required-init-keyword: name:;
   constant slot %initializer :: <expression>, required-init-keyword: initializer:;
@@ -163,4 +169,9 @@ end method;
 
 define method s-expression (ast :: <variable-declaration>) => (s-expr :: <sequence>)
   list(#"var", ast.%name.%value, ast.%initializer.s-expression)
+end method;
+
+define method s-expression (ast :: <if-statement>) => (s-expr :: <sequence>)
+  list(#"if", ast.%test.s-expression, ast.%then.s-expression,
+       ast.%else & ast.%else.s-expression)
 end method;

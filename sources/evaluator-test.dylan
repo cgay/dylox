@@ -75,3 +75,12 @@ define test test-chapter-8-example ()
                %eval(text),
                "chapter 8 example");
 end test;
+
+define test test-if-statement ()
+  assert-equal("a", %eval("""if (true)  "a"; else "b";"""), "basic IF, true case");
+  assert-equal("b", %eval("""if (false) "a"; else "b";"""), "basic IF, false case");
+  assert-equal("a", %eval("""if (true) "a";"""),  "no ELSE clause, true case");
+  assert-equal(#f,  %eval("""if (false) "a";"""), "no ELSE clause, false case");
+  assert-equal("b", %eval("""var a = "a"; if (a == "a") "b"; else "c";"""),
+               "non-literal test expression");
+end test;

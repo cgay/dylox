@@ -209,3 +209,12 @@ define method eval
   let name = ast.%name.%value;
   set-variable(ev, env, name, eval(ev, ast.%value, env))
 end method;
+
+define method eval
+    (ev :: <evaluator>, ast :: <if-statement>, env :: <environment>) => (value)
+  if (truthy?(eval(ev, ast.%test, env)))
+    eval(ev, ast.%then, env)
+  elseif (ast.%else)
+    eval(ev, ast.%else, env)
+  end
+end method;
