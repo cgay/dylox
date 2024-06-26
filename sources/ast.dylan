@@ -180,3 +180,7 @@ define method s-expression (ast :: <if-statement>) => (s-expr :: <sequence>)
   list(#"if", ast.%test.s-expression, ast.%then.s-expression,
        ast.%else & ast.%else.s-expression)
 end method;
+
+define method s-expression (ast :: <while-statement>) => (s-expr :: <sequence>)
+  list(#"while", ast.%test.s-expression, ast.%body.s-expression)
+end method;

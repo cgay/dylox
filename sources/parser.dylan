@@ -81,7 +81,6 @@ define function parse-declaration (p :: <parser>) => (d :: false-or(<statement>)
         next-handler()
       end;
   if (next-token-matches(p, "var"))
-    consume-token(p);
     parse-variable-declaration(p)
   else
     parse-statement(p)
@@ -89,6 +88,7 @@ define function parse-declaration (p :: <parser>) => (d :: false-or(<statement>)
 end function;
 
 define function parse-variable-declaration (p :: <parser>) => (s :: <variable-declaration>)
+  consume-token(p, expect: "var");
   let token = consume-token(p, expect: <identifier-token>);
   let init = if (next-token-matches(p, "="))
                consume-token(p);
@@ -101,6 +101,7 @@ define function parse-variable-declaration (p :: <parser>) => (s :: <variable-de
 end function;
 
 // statement      → exprStmt
+//                | forStmt
 //                | ifStmt
 //                | printStmt
 //                | whileStmt
@@ -108,11 +109,45 @@ end function;
 define function parse-statement (p :: <parser>) => (s :: <statement>)
   case
     next-token-matches(p, "{")     => parse-block(p);
+    next-token-matches(p, "for")   => parse-for-statement(p);
     next-token-matches(p, "if")    => parse-if-statement(p);
     next-token-matches(p, "print") => parse-print-statement(p);
     next-token-matches(p, "while") => parse-while-statement(p);
     otherwise                      => parse-expression-statement(p);
   end
+end function;
+
+// forStmt        → "for" "(" ( varDecl | exprStmt | ";" )
+//                  expression? ";"
+//                  expression? ")" statement ;
+define function parse-for-statement (p :: <parser>) => (s :: <statement>)
+  consume-token(p, expect: "for");
+  consume-token(p, expect: "(");
+  let initializer = select (p.peek-token.%value)
+                      #";" => #f;
+                      #"var" => parse-variable-declaration(p);
+                      otherwise => parse-expression-statement(p);
+                    end;
+  let condition = iff(p.peek-token.%value == #";",
+                      make(<literal-expression>, value: #t),
+                      parse-expression(p));
+  consume-token(p, expect: ";");
+  let step = if (p.peek-token.%value ~== #")")
+               parse-expression(p)
+             end;
+  consume-token(p, expect: ")");
+  let body = parse-statement(p);
+  if (step)
+    body := make(<block>,
+                 statements: list(body, make(<expression-statement>, expression: step)));
+  end;
+  body := make(<while-statement>,
+               test: condition,
+               body: body);
+  if (initializer)
+    body := make(<block>, statements: list(initializer, body));
+  end;
+  body
 end function;
 
 // whileStmt      → "while" "(" expression ")" statement ;

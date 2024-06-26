@@ -103,3 +103,18 @@ end test;
 define test test-while-statement ()
   assert-equal(128.0d0, %eval("var x = 2; while (x < 100) x = x * 2; x;"));
 end test;
+
+define test test-for-statement ()
+  assert-equal(3.0d0, %eval("for (var x=1; x < 3; x = x + 1) x;"));
+  // TODO: adding a comment in the for loop breaks it.
+  let fibonacci = """
+    var a = 0;
+    var temp;
+    for (var b = 1; a < 10000; b = temp + b) {
+      temp = a;
+      a = b;
+    }
+    a;
+    """;
+    assert-equal(10946.0d0, %eval(fibonacci));
+end test;
