@@ -99,7 +99,8 @@ define class <reserved-word-token> (<identifier-token>) end;
 define class <literal-token>       (<token>) end;
 define class <number-token>        (<literal-token>) end;
 define class <string-token>        (<literal-token>) end;
-define class <boolean-token>       (<reserved-word-token>, <literal-token>) end;
+define class <nil-token>           (<literal-token>, <reserved-word-token>) end;
+define class <boolean-token>       (<literal-token>, <reserved-word-token>) end;
 define class <comment-token>       (<token>) end;
 define class <eof-token>           (<token>) end;
 
@@ -166,12 +167,14 @@ define function scan-token (scanner :: <scanner>) => (t :: <token>)
             token(<number-token>, value: scan-number(scanner))
           elseif (alphabetic?(char) | char == '_')
             let text = scan-identifier(scanner);
-            let true? = text = "true";
-            iff(true? | text = "false",
-                token(<boolean-token>, value: true?),
+            select (text by \=)
+              "true", "false" => token(<boolean-token>, value: text = "true");
+              "nil" => token(<nil-token>);
+              otherwise =>
                 token(iff(member?(text, $reserved-words, test: \=),
                           <reserved-word-token>,
-                          <identifier-token>)))
+                          <identifier-token>));
+            end select
           else
             scanner-error(scanner, "unexpected character %=", char);
             token(<eof-token>, value: #"eof");

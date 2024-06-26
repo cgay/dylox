@@ -37,5 +37,6 @@ define module lox-impl
     <expression>,
     parse-expression,
     s-expression,
-    <environment>, <global-environment>, <lexical-environment>;
+    <environment>, <global-environment>, <lexical-environment>,
+    truthy?;
 end module;

@@ -169,9 +169,9 @@ define function parse-expression (p :: <parser>) => (e :: <expression>)
 end function;
 
 // assignment     → IDENTIFIER "=" assignment
-//                | equality ;
+//                | logic_or ;
 define function parse-assignment (p :: <parser>) => (e :: <expression>)
-  let expr = parse-equality(p);
+  let expr = parse-logical-or(p);
   if (~next-token-matches(p, "="))
     expr
   else
@@ -184,6 +184,39 @@ define function parse-assignment (p :: <parser>) => (e :: <expression>)
     end
   end
 end function;
+
+// logic_or       → logic_and ( "or" logic_and )* ;
+define function parse-logical-or (p :: <parser>) => (e :: <expression>)
+  let expr = parse-logical-and(p);
+  iterate loop ()
+    if (peek-token(p).%value == #"or")
+      let op = consume-token(p);
+      expr := make(<logical-expression>,
+                   operator: op,
+                   left: expr,
+                   right: parse-logical-and(p));
+      loop();
+    end;
+  end iterate;
+  expr
+end function;
+
+// logic_and      → equality ( "and" equality )* ;
+define function parse-logical-and (p :: <parser>) => (e :: <expression>)
+  let expr = parse-equality(p);
+  iterate loop ()
+    if (peek-token(p).%value == #"and")
+      let op = consume-token(p);
+      expr := make(<logical-expression>,
+                   operator: op,
+                   left: expr,
+                   right: parse-equality(p));
+      loop();
+    end;
+  end iterate;
+  expr
+end function;
+
 
 // equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 define function parse-equality (p :: <parser>) => (e :: <expression>)

@@ -90,7 +90,7 @@ define method eval
   end
 end method;
 
-define function truthy? (value) => (b :: <boolean>)
+define inline function truthy? (value) => (b :: <boolean>)
   ~(value == $nil | value == #f)
 end function;
 
@@ -166,7 +166,15 @@ end method;
 
 define method eval
     (ev :: <evaluator>, ast :: <logical-expression>, env :: <environment>) => (value)
-  nyi(ev, ast);
+  let left = eval(ev, ast.%left, env);
+  select (ast.%operator.%value)
+    #"or" => iff(truthy?(left),
+                 left,
+                 eval(ev, ast.%right, env));
+    #"and" => iff(truthy?(left),
+                  eval(ev, ast.%right, env),
+                  left);
+  end
 end method;
 
 define method eval

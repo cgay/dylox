@@ -84,3 +84,18 @@ define test test-if-statement ()
   assert-equal("b", %eval("""var a = "a"; if (a == "a") "b"; else "c";"""),
                "non-literal test expression");
 end test;
+
+define test test-or-expression ()
+  assert-true(truthy?(%eval("true or false;")));
+  assert-true(truthy?(%eval("false or true;")));
+  assert-false(truthy?(%eval("false or nil;")));
+  assert-false(truthy?(%eval("nil or false;")));
+  assert-true(truthy?(%eval("1 or false;")));
+  assert-true(truthy?(%eval(""" "a" or false;""")));
+end test;
+
+define test test-and-expression ()
+  assert-true(truthy?(%eval("true and true;")));
+  assert-true(truthy?(%eval("true and 2;")));
+  assert-true(truthy?(%eval("""true and "blue"; """)));
+end test;
