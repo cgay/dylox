@@ -16,6 +16,11 @@ define class <program> (<statement>)
   constant slot %statements, required-init-keyword: statements:;
 end class;
 
+define class <while-statement> (<statement>)
+  constant slot %test :: <expression>, required-init-keyword: test:;
+  constant slot %body :: <statement>, required-init-keyword: body:;
+end class;
+
 define class <if-statement> (<statement>)
   constant slot %test :: <expression>, required-init-keyword: test:;
   constant slot %then :: <statement>, required-init-keyword: then:;

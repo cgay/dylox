@@ -99,3 +99,7 @@ define test test-and-expression ()
   assert-true(truthy?(%eval("true and 2;")));
   assert-true(truthy?(%eval("""true and "blue"; """)));
 end test;
+
+define test test-while-statement ()
+  assert-equal(128.0d0, %eval("var x = 2; while (x < 100) x = x * 2; x;"));
+end test;

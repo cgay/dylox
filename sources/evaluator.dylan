@@ -226,3 +226,12 @@ define method eval
     eval(ev, ast.%else, env)
   end
 end method;
+
+define method eval
+    (ev :: <evaluator>, ast :: <while-statement>, env :: <environment>) => (value)
+  let value = $nil;
+  while (truthy?(eval(ev, ast.%test, env)))
+    value := eval(ev, ast.%body, env);
+  end;
+  value
+end method;

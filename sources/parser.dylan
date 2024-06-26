@@ -103,14 +103,27 @@ end function;
 // statement      → exprStmt
 //                | ifStmt
 //                | printStmt
+//                | whileStmt
 //                | block ;
 define function parse-statement (p :: <parser>) => (s :: <statement>)
   case
+    next-token-matches(p, "{")     => parse-block(p);
     next-token-matches(p, "if")    => parse-if-statement(p);
     next-token-matches(p, "print") => parse-print-statement(p);
-    next-token-matches(p, "{")     => parse-block(p);
+    next-token-matches(p, "while") => parse-while-statement(p);
     otherwise                      => parse-expression-statement(p);
   end
+end function;
+
+// whileStmt      → "while" "(" expression ")" statement ;
+define function parse-while-statement (p :: <parser>) => (s :: <while-statement>)
+  consume-token(p, expect: "while");
+  consume-token(p, expect: "(");
+  let test-expr = parse-expression(p);
+  consume-token(p, expect: ")");
+  make(<while-statement>,
+       test: test-expr,
+       body: parse-statement(p))
 end function;
 
 // ifStmt         → "if" "(" expression ")" statement
