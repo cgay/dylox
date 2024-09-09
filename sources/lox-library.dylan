@@ -5,6 +5,7 @@ define library lox
   use io;
   use strings;
   use system;
+  use time;
   use uncommon-dylan;
 
   export
@@ -29,12 +30,13 @@ define module lox-impl
   use print,       prefix: "io/";
   use strings;
   use streams,     prefix: "io/";
+  use time;
   use uncommon-utils;
 
   // for the test suite
   export
     %value,
-    <expression>,
+    <statement>,
     parse-expression,
     s-expression,
     <environment>, <global-environment>, <lexical-environment>,

@@ -1,6 +1,7 @@
 {
     "dependencies": [
         "strings@1.1",
+        "time",
         "uncommon-dylan"
     ],
     "dev-dependencies": [

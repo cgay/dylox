@@ -36,7 +36,7 @@ define function eval-top-level
       io/format-out("AST: %=\n", statement.s-expression);
       io/force-out();
     end;
-    value := eval(ev, statement, ev.%environment);
+    value := eval(ev, statement, ev.%globals);
     if (ev.print-ast?)
       io/format-out("==> %=\n", value);
       io/force-out();
@@ -53,11 +53,35 @@ define function runtime-error (ev :: <evaluator>, fmt :: <string>, #rest args)
 end function;
 
 define class <evaluator> (<object>)
-  constant slot %environment :: <global-environment> = make(<global-environment>);
+  constant slot %globals :: <global-environment> = make(<global-environment>);
   constant slot print-errors? = #t, init-keyword: print-errors?:;
   constant slot print-ast? = #f,    init-keyword: print-ast?:;
   slot had-errors? :: <boolean> = #f;
 end class;
+
+define method initialize (ev :: <evaluator>, #key) => ()
+  local
+    // clock() returns the idealized UTC system time in milliseconds.
+    // Dylan has no equivalent to currentTimeMillis()
+    method clock ()
+      // hack hack hack - for now we only expect this to be used for
+      // comparison with another call to clock() so this should suffice.
+      let now = time-now(zone: $utc);
+      let (year, month, day, hour, minute, second, nanosecond) = time-components(now);
+      year * 365 * 24 * 3_600_000
+        + day * 24 * 3_600_000
+        + hour * 3_600_000
+        + minute * 60_000
+        + second * 1_000
+        + truncate/(nanosecond, 1_000_000)
+    end method;
+  create-variable(ev, ev.%globals,
+                  #"clock",
+                  make(<native-function>,
+                       name: "clock",
+                       arity: 0,
+                       function: clock));
+end method;
 
 define generic eval
     (evaluator :: <evaluator>, ast :: <ast>, environment :: <environment>)
@@ -155,8 +179,8 @@ define method eval (ev :: <evaluator>, ast :: <block>, env :: <environment>) => 
   result
 end method;
 
-define function nyi (i, ast)
-  runtime-error(i, "evaluation of %= AST not yet implemented", ast);
+define function nyi (ev, ast)
+  runtime-error(ev, "evaluation of %= AST not yet implemented", ast);
 end function;
 
 define method eval
@@ -177,9 +201,94 @@ define method eval
   end
 end method;
 
+//
+// Functions
+//
+
+define abstract class <callable> (<object>)
+end class;
+
+define generic arity
+    (c :: <callable>)
+ => (arity :: <integer>);
+
+define generic call
+    (ev :: <evaluator>, c :: <callable>, args :: <sequence>)
+ => (value);
+
+define class <native-function> (<callable>)
+  constant slot %name     :: <string>,   required-init-keyword: name:;
+  constant slot %function :: <function>, required-init-keyword: function:;
+  constant slot arity     :: <integer>,  required-init-keyword: arity:;
+end class;
+
+define method io/print-object (fun :: <native-function>, stream :: <stream>) => ()
+  io/printing-object (fun, stream)
+    io/print(fun.%name, stream)
+  end;
+end method;
+
+define method call
+    (ev :: <evaluator>, fun :: <native-function>, args :: <sequence>)
+ => (value)
+  // For now we only have clock() which accepts no args (checked elsewhere).
+  fun.%function()
+end method;
+
+define class <lox-function> (<callable>)
+  constant slot %declaration :: <function-statement>, required-init-keyword: declaration:;
+end class;
+
+define method io/print-object (fun :: <lox-function>, stream :: <stream>) => ()
+  io/printing-object (fun, stream)
+    io/print(fun.%declaration.%name.%text, stream)
+  end;
+end method;
+
+define method call
+    (ev :: <evaluator>, fun :: <lox-function>, args :: <sequence>)
+ => (value)
+  let lexenv = make(<lexical-environment>, parent: ev.%globals);
+  for (param in fun.%declaration.%parameters,
+       arg in args)
+    create-variable(ev, lexenv, param.%value, arg);
+  end;
+  let result = $nil;
+  for (statement in fun.%declaration.%body)
+    result := eval(ev, statement, lexenv);
+  end;
+  result
+end method;
+
+// Evaluating a "fun" statement binds a variable (currently always in the
+// global environment) to a <lox-function>
+define method eval
+    (ev :: <evaluator>, ast :: <function-statement>, env :: <environment>) => (value)
+  let fun = make(<lox-function>,
+                 declaration: ast);
+  create-variable(ev, ev.%globals, ast.%name.%value, fun);
+end method;
+
 define method eval
     (ev :: <evaluator>, ast :: <call-expression>, env :: <environment>) => (value)
-  nyi(ev, ast);
+  let callee = eval(ev, ast.%callee, env); // may be a function or class instance
+  if (~instance?(callee, <callable>))
+    runtime-error(ev, "can only call functions and methods, got %= (at %=)",
+                  callee, ast.%close-paren);
+  end;
+  let args = map(method (arg)
+                   eval(ev, arg, env)
+                 end,
+                 ast.%arguments);
+  if (arity(callee) ~== args.size)
+    runtime-error(ev, "%= expected %d arguments but got %d",
+                  callee.%declaration.%name, arity(callee), args.size);
+  end;
+  call(ev, callee, args);
+end method;
+
+define method arity (fun :: <lox-function>) => (arity :: <integer>)
+  fun.%declaration.%parameters.size
 end method;
 
 define method eval

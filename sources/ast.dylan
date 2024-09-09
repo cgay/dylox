@@ -39,8 +39,15 @@ define class <expression-statement> (<statement>)
 end class;
 
 // This matches the book, but we could consider making print a normal function
-// call expression.
+// call expression. (ahah, in ch 10 he suggests doing just that. This way was
+// just to make the interpreter useful before functions were defined.)
 define class <print-statement> (<expression-statement>) end;
+
+define class <function-statement> (<statement>)
+  constant slot %name :: <token>,          required-init-keyword: name:;
+  constant slot %parameters :: <sequence>, required-init-keyword: parameters:;
+  constant slot %body :: <sequence>,       required-init-keyword: body:;
+end class;
 
 define class <unary-expression> (<expression>)
   constant slot %operator :: <token>,   required-init-keyword: operator:;
@@ -66,6 +73,8 @@ end class;
 define class <call-expression> (<expression>)
   constant slot %callee :: <expression>,  required-init-keyword: callee:;
   constant slot %arguments :: <sequence>, required-init-keyword: arguments:;
+  // Use close paren of parameter list for error reporting.
+  constant slot %close-paren :: <token>,  required-init-keyword: close-paren:;
 end class;
 
 // Get a field value.
@@ -183,4 +192,10 @@ end method;
 
 define method s-expression (ast :: <while-statement>) => (s-expr :: <sequence>)
   list(#"while", ast.%test.s-expression, ast.%body.s-expression)
+end method;
+
+define method s-expression (ast :: <function-statement>) => (s-expr :: <sequence>)
+  list(#"fun", ast.%name.%value,
+       map-as(<list>, %value, ast.%parameters),
+       map-as(<list>, s-expression, ast.%body))
 end method;

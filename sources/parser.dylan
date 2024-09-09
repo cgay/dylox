@@ -71,6 +71,9 @@ define function next-token-matches (p :: <parser>, #rest strings) => (matched? :
   member?(p.peek-token.%text, strings, test: \=)
 end function;
 
+// declaration    → funDecl
+//                | varDecl
+//                | statement ;
 define function parse-declaration (p :: <parser>) => (d :: false-or(<statement>))
   let handler <parser-error>
     = method (err, next-handler)
@@ -80,11 +83,52 @@ define function parse-declaration (p :: <parser>) => (d :: false-or(<statement>)
         // decide whether or not to continue (by returning #f).
         next-handler()
       end;
-  if (next-token-matches(p, "var"))
-    parse-variable-declaration(p)
-  else
-    parse-statement(p)
+  select (peek-token(p).%value)
+    #"var"    => parse-variable-declaration(p);
+    #"fun"    => parse-function-declaration(p);
+    otherwise => parse-statement(p);
   end
+end function;
+
+// funDecl        → "fun" function ;
+// function       → IDENTIFIER "(" parameters? ")" block ;
+define function parse-function-declaration
+    (p :: <parser>) => (s :: <function-statement>)
+  consume-token(p, expect: "fun");
+  let name = consume-token(p, expect: <identifier-token>);
+  let params = parse-function-parameters(p);
+  let body = parse-block(p);
+  make(<function-statement>,
+       name: name,
+       parameters: params,
+       body: body)
+end function;
+
+// parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
+define function parse-function-parameters (p :: <parser>) => (params :: <sequence>)
+  consume-token(p, expect: "(");
+  iterate loop (params = #(), token = consume-token(p), prev = #f)
+    if (params.size > 255) // book uses >= here?
+      parser-error(p, "function calls should have <= 255 arguments");
+    end;
+    if (params.empty? & token.%value == #",")
+      parser-error(p, "invalid leading comma in parameter list");
+    end;
+    select (token.%value)
+      #")" =>
+        if (prev & prev.%value == #",")
+          parser-error(p, "invalid trailing comma in parameter list");
+        end;
+        reverse!(params);
+      #"," =>
+        loop(params, consume-token(p), token);
+      otherwise =>
+        if (~instance?(token, <identifier-token>))
+          parser-error(p, "function parameters must be identifiers, got %=", token);
+        end;
+        loop(pair(token, params), consume-token(p), token);
+    end select
+  end iterate
 end function;
 
 define function parse-variable-declaration (p :: <parser>) => (s :: <variable-declaration>)
@@ -108,7 +152,7 @@ end function;
 //                | block ;
 define function parse-statement (p :: <parser>) => (s :: <statement>)
   case
-    next-token-matches(p, "{")     => parse-block(p);
+    next-token-matches(p, "{")     => make(<block>, statements: parse-block(p));
     next-token-matches(p, "for")   => parse-for-statement(p);
     next-token-matches(p, "if")    => parse-if-statement(p);
     next-token-matches(p, "print") => parse-print-statement(p);
@@ -185,7 +229,7 @@ define function parse-print-statement (p :: <parser>) => (s :: <print-statement>
 end function;
 
 // block          → "{" declaration* "}" ;
-define function parse-block (p :: <parser>) => (b :: <block>)
+define function parse-block (p :: <parser>) => (statements :: <sequence>)
   consume-token(p, expect: "{");
   let statements = make(<stretchy-vector>);
   iterate loop ()
@@ -202,7 +246,7 @@ define function parse-block (p :: <parser>) => (b :: <block>)
     end;
   end;
   consume-token(p, expect: "}");
-  make(<block>, statements: statements)
+  statements
 end function;
 
 define function parse-expression-statement (p :: <parser>) => (s :: <expression-statement>)
@@ -314,14 +358,48 @@ define function parse-factor (p :: <parser>) => (e :: <expression>)
   end iterate
 end function;
 
-// unary          → ( "!" | "-" ) unary
+// unary          → ( "!" | "-" ) unary | call
 //                | primary ;
 define function parse-unary (p :: <parser>) => (e :: <expression>)
   if (next-token-matches(p, "!", "-"))
     make(<unary-expression>, operator: consume-token(p), right: parse-unary(p))
   else
-    parse-primary(p)
+    parse-call(p)
   end
+end function;
+
+// call           → primary ( "(" arguments? ")" )* ;
+define function parse-call (p :: <parser>) => (e :: <expression>)
+  let expr = parse-primary(p);
+  iterate parse-next-call (token = peek-token(p))
+    if (token.%value == #"(")
+      consume-token(p);
+      expr := iterate params (args = #(), token = peek-token(p))
+                if (args.size > 255) // book uses >= here?
+                  parser-error(p, "function calls should have <= 255 arguments");
+                end;
+                select (token.%value)
+                  #")" =>
+                    consume-token(p);
+                    make(<call-expression>,
+                         callee: expr,
+                         arguments: reverse!(args),
+                         close-paren: token);
+                  #"," =>
+                    if (args.empty?)
+                      parser-error(p, "invalid parameter list; leading comma not allowed");
+                    else
+                      consume-token(p);
+                      params(pair(parse-expression(p), args), peek-token(p))
+                    end;
+                  otherwise =>
+                    params(pair(parse-expression(p), args), peek-token(p));
+                end select
+              end iterate;
+      parse-next-call(peek-token(p)) // handle multiple calls: f()()()
+    end
+  end iterate;
+  expr
 end function;
 
 // primary        → NUMBER | STRING | "true" | "false" | "nil"
